@@ -37,22 +37,10 @@ I'm a software engineer with an enthusiasm for mathematics and problem solving. 
 
 ### On GitHub
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://github-readme-stats.vercel.app/api?username=onlysid&show_icons=true&count_private=true&hide_border=true&hide=issues,contribs&bg_color=00000000&title_color=ddb3cb&text_color=f3eef2&icon_color=a878aa">
-    <img height="165" alt="GitHub stats" src="https://github-readme-stats.vercel.app/api?username=onlysid&show_icons=true&count_private=true&hide_border=true&hide=issues,contribs&bg_color=00000000&title_color=684780&text_color=201a26&icon_color=8a66a3">
-  </picture>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://github-readme-stats.vercel.app/api/top-langs/?username=onlysid&layout=compact&hide_border=true&langs_count=6&hide=jupyter%20notebook,tex,css,php&exclude_repo=Pacman-AI&bg_color=00000000&title_color=ddb3cb&text_color=f3eef2">
-    <img height="165" alt="Most used languages" src="https://github-readme-stats.vercel.app/api/top-langs/?username=onlysid&layout=compact&hide_border=true&langs_count=6&hide=jupyter%20notebook,tex,css,php&exclude_repo=Pacman-AI&bg_color=00000000&title_color=684780&text_color=201a26">
-  </picture>
-</p>
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://streak-stats.demolab.com?user=onlysid&hide_border=true&background=00000000&ring=a878aa&fire=ddb3cb&currStreakNum=f3eef2&sideNums=f3eef2&currStreakLabel=ddb3cb&sideLabels=a79bb2&dates=a79bb2&stroke=3b3243">
-    <img alt="Contribution streak" src="https://streak-stats.demolab.com?user=onlysid&hide_border=true&background=00000000&ring=8a66a3&fire=684780&currStreakNum=201a26&sideNums=201a26&currStreakLabel=684780&sideLabels=645868&dates=645868&stroke=e4dbe6">
-  </picture>
-</p>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/stats-dark.svg">
+  <img alt="My GitHub activity: contributions over the last year, streaks and most used languages" src="assets/stats-light.svg" width="100%">
+</picture>
 
 <p align="center">
   <a href="https://sidneyb.uk"><b>sidneyb.uk</b></a>
