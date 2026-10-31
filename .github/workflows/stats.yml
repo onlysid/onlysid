@@ -1,0 +1,37 @@
+# Draws assets/stats-dark.svg and assets/stats-light.svg (the "On GitHub" card in the README) from GitHub's own
+# numbers, once a day and whenever the drawing changes. Nothing outside GitHub is involved.
+name: Draw the GitHub card
+
+on:
+  schedule:
+    - cron: "17 5 * * *" # every morning
+  workflow_dispatch: # and from the Actions tab, by hand
+  push:
+    branches: [main, master]
+    paths: [".github/**", "assets/fonts/**"]
+
+permissions:
+  contents: write
+
+jobs:
+  draw:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Draw the card
+        run: node .github/scripts/stats.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Optional: a personal token with the read:user scope, saved as a repository secret, counts private
+          # contributions too.
+          STATS_TOKEN: ${{ secrets.STATS_TOKEN }}
+          STATS_USER: ${{ github.repository_owner }}
+      - name: Save it, if it changed
+        run: |
+          git add assets/stats-*.svg
+          if git diff --cached --quiet; then echo "No change."; exit 0; fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Redraw the GitHub card"
+          git push
