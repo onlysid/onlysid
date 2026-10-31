@@ -1,8 +1,10 @@
 // Draws the "On GitHub" card for the profile README, in the colours and type of sidneyb.uk, from GitHub's own
 // numbers. Run by .github/workflows/stats.yml once a day; writes assets/stats-dark.svg and assets/stats-light.svg.
 //
-//   GITHUB_TOKEN   the workflow's own token: enough for public activity
-//   STATS_TOKEN    optional: a personal token with the read:user scope, so private contributions are counted too
+//   GITHUB_TOKEN   the workflow's own token: public repositories and activity only
+//   STATS_TOKEN    a personal token (classic) with the repo and read:user scopes: private repositories, their
+//                  languages and private contributions are counted too. Only totals are drawn; no private
+//                  repository is named on the card.
 //   MOCK           optional: a JSON file of made-up data, to try the drawing without asking GitHub
 //
 // No packages: plain Node 20 or later.
@@ -16,13 +18,14 @@ const USER = process.env.STATS_USER || "onlysid";
 const HIDE_LANGS = ["jupyter notebook", "tex", "css", "php"];
 const HIDE_REPOS = ["Pacman-AI"];
 
-const QUERY = `query($login: String!) {
+const PRIVATE = !!process.env.STATS_TOKEN && !process.env.MOCK;
+const QUERY = `query($login: String!, $after: String) {
   user(login: $login) {
-    followers { totalCount }
     contributionsCollection { contributionCalendar { totalContributions weeks { contributionDays { date contributionCount } } } }
-    repositories(first: 100, ownerAffiliations: OWNER, isFork: false, privacy: PUBLIC, orderBy: { field: PUSHED_AT, direction: DESC }) {
+    repositories(first: 100, after: $after, ownerAffiliations: OWNER, isFork: false${PRIVATE ? "" : ", privacy: PUBLIC"}, orderBy: { field: PUSHED_AT, direction: DESC }) {
       totalCount
-      nodes { name stargazerCount languages(first: 10, orderBy: { field: SIZE, direction: DESC }) { edges { size node { name } } } }
+      pageInfo { hasNextPage endCursor }
+      nodes { name isPrivate stargazerCount languages(first: 10, orderBy: { field: SIZE, direction: DESC }) { edges { size node { name } } } }
     }
   }
 }`;
@@ -31,14 +34,25 @@ async function load() {
   if (process.env.MOCK) return JSON.parse(readFileSync(process.env.MOCK, "utf8"));
   const token = process.env.STATS_TOKEN || process.env.GITHUB_TOKEN;
   if (!token) throw new Error("No token: set GITHUB_TOKEN (the workflow does this) or STATS_TOKEN.");
-  const res = await fetch("https://api.github.com/graphql", {
-    method: "POST",
-    headers: { Authorization: `bearer ${token}`, "Content-Type": "application/json", "User-Agent": `${USER}-profile-stats` },
-    body: JSON.stringify({ query: QUERY, variables: { login: USER } }),
-  });
-  const body = await res.json();
-  if (!res.ok || body.errors) throw new Error(`GitHub said: ${JSON.stringify(body.errors ?? body)}`);
-  return body.data.user;
+  if (!PRIVATE) console.log("No STATS_TOKEN secret: counting public repositories only.");
+  const ask = async (after) => {
+    const res = await fetch("https://api.github.com/graphql", {
+      method: "POST",
+      headers: { Authorization: `bearer ${token}`, "Content-Type": "application/json", "User-Agent": `${USER}-profile-stats` },
+      body: JSON.stringify({ query: QUERY, variables: { login: USER, after } }),
+    });
+    const body = await res.json();
+    if (!res.ok || body.errors) throw new Error(`GitHub said: ${JSON.stringify(body.errors ?? body)}`);
+    return body.data.user;
+  };
+  // Every repository, a hundred at a time.
+  const user = await ask(null);
+  for (let page = user.repositories.pageInfo; page.hasNextPage; ) {
+    const more = await ask(page.endCursor);
+    user.repositories.nodes.push(...more.repositories.nodes);
+    page = more.repositories.pageInfo;
+  }
+  return user;
 }
 
 // ---- The numbers -----------------------------------------------------------------------------------------------
@@ -66,7 +80,8 @@ function numbers(user) {
   const total = [...sizes.values()].reduce((a, b) => a + b, 0) || 1;
   let langs = [...sizes].sort((a, b) => b[1] - a[1]).map(([name, size]) => ({ name, share: size / total }));
   if (langs.length > 6) langs = [...langs.slice(0, 5), { name: "Other", share: langs.slice(5).reduce((a, l) => a + l.share, 0) }];
-  return { weeks: cal.weeks, total: cal.totalContributions, current, longest, repos: user.repositories.totalCount, stars, langs };
+  const hidden = user.repositories.nodes.filter((r) => r.isPrivate).length;
+  return { weeks: cal.weeks, total: cal.totalContributions, current, longest, repos: user.repositories.totalCount, hidden, stars, langs };
 }
 
 // ---- The drawing -----------------------------------------------------------------------------------------------
@@ -130,7 +145,7 @@ function draw(n, t, fonts, today) {
     [n.total.toLocaleString("en-GB"), "contributions, last year"],
     [`${n.current}`, n.current === 1 ? "day streak now" : "day streak now"],
     [`${n.longest}`, "longest streak, days"],
-    [`${n.repos}`, n.repos === 1 ? "public repository" : "public repositories"],
+    [`${n.repos}`, n.hidden ? `repositories, ${n.hidden} private` : n.repos === 1 ? "public repository" : "public repositories"],
   ];
   const colW = (W - pad * 2) / stats.length;
   const statSvg = stats
@@ -161,7 +176,7 @@ function draw(n, t, fonts, today) {
   const H = by + 100;
   const stamp = `UPDATED ${today.getUTCDate()} ${MONTHS[today.getUTCMonth()]} ${today.getUTCFullYear()}`;
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(`${n.total} contributions in the last year; a ${n.current} day streak; ${n.repos} public repositories. Most used: ${n.langs.map((l) => l.name).join(", ")}.`)}">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(`${n.total} contributions in the last year; a ${n.current} day streak; ${n.repos} repositories${n.hidden ? `, ${n.hidden} of them private` : ""}. Most used: ${n.langs.map((l) => l.name).join(", ")}.`)}">
 <defs>
 <style>
 @font-face{font-family:D;src:url(data:font/woff2;base64,${fonts.display}) format("woff2");font-weight:600}

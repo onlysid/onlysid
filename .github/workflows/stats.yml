@@ -25,8 +25,8 @@ jobs:
         run: node .github/scripts/stats.mjs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Optional: a personal token with the read:user scope, saved as a repository secret, counts private
-          # contributions too.
+          # A personal token (classic) with the repo and read:user scopes, saved as the repository secret
+          # STATS_TOKEN, adds private repositories and private contributions. Without it: public only.
           STATS_TOKEN: ${{ secrets.STATS_TOKEN }}
           STATS_USER: ${{ github.repository_owner }}
       - name: Save it, if it changed
